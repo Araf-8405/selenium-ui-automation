@@ -15,6 +15,7 @@ public class LoginPage {
     private By passwordField = By.name("password");
     private By loginButton = By.xpath("//button[normalize-space()='Login']");
     private By errorMessage = By.xpath("//div[@class='oxd-alert-content oxd-alert-content--error']");
+    private By requiredFieldMessage = By.xpath("//span[contains(@class,'oxd-input-field-error-message')]");
 
     // Constructor to initialize WebDriver and WebDriverWait
     public LoginPage(WebDriver driver) {

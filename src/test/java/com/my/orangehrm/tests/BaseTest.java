@@ -1,52 +1,72 @@
 package com.my.orangehrm.tests;
 
+import com.aventstack.extentreports.ExtentTest;
+import com.aventstack.extentreports.Status;
 import io.github.bonigarcia.wdm.WebDriverManager;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.openqa.selenium.firefox.FirefoxOptions;
-import org.testng.annotations.AfterMethod;
-import org.testng.annotations.BeforeMethod;
+import org.testng.ITestResult;
+import org.testng.annotations.*;
+import java.lang.reflect.Method;
+
 import com.my.orangehrm.utilities.ConfigReader;
+import com.my.orangehrm.utilities.ExtentReportManager;
 
 public class BaseTest {
     protected WebDriver driver;
     protected ConfigReader configReader;
+    protected ExtentTest test; // Extent test reference
+
+    @BeforeSuite
+    public void setupSuite() {
+        ExtentReportManager.getInstance(); // Initialize the report once per suite
+    }
 
     @BeforeMethod
-    public void setup() {
+    public void setup(Method method) {
         configReader = new ConfigReader();
-        String browser = configReader.getProperty("browser").toLowerCase(); // Get browser from config
-        String url = configReader.getProperty("base.url"); // Get URL from config
+        String browser = configReader.getProperty("browser").toLowerCase();
+        String url = configReader.getProperty("base.url");
+
+        // Start a new test for each method
+        test = ExtentReportManager.getInstance().createTest(method.getName());
 
         switch (browser) {
             case "chrome":
-                WebDriverManager.chromedriver().setup(); // Automatically downloads and sets up ChromeDriver
+                WebDriverManager.chromedriver().setup();
                 ChromeOptions chromeOptions = new ChromeOptions();
-                // Add any chrome options if needed
-                chromeOptions.addArguments("--start-maximized"); // Start Chrome maximized
+                chromeOptions.addArguments("--start-maximized");
                 driver = new ChromeDriver(chromeOptions);
                 break;
             case "firefox":
-                WebDriverManager.firefoxdriver().setup(); // Automatically downloads and sets up FirefoxDriver
+                WebDriverManager.firefoxdriver().setup();
                 FirefoxOptions firefoxOptions = new FirefoxOptions();
-                // Add any firefox options if needed
                 driver = new FirefoxDriver(firefoxOptions);
                 break;
-            // Add more browsers as needed (e.g., Edge, Safari)
             default:
                 throw new RuntimeException("Unsupported browser: " + browser);
         }
 
-        driver.manage().window().maximize(); // Maximize browser window
-        driver.get(url); // Navigate to the application URL
+        driver.get(url);
     }
 
     @AfterMethod
-    public void tearDown() {
+    public void tearDown(ITestResult result) {
+        if (result.getStatus() == ITestResult.FAILURE) {
+            test.log(Status.FAIL, "Test Failed: " + result.getThrowable());
+        } else if (result.getStatus() == ITestResult.SUCCESS) {
+            test.log(Status.PASS, "Test Passed");
+        } else if (result.getStatus() == ITestResult.SKIP) {
+            test.log(Status.SKIP, "Test Skipped: " + result.getThrowable());
+        }
+
+        ExtentReportManager.getInstance().flush(); // Write result to report
+
         if (driver != null) {
-            driver.quit(); // Close the browser
+            driver.quit();
         }
     }
 }
